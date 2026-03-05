@@ -1,0 +1,96 @@
+version: 1
+
+# ──────────────────────────────────────────────────────────────────────
+# monitors.yaml — TermWatch configuration example
+# Docs: https://termwatch.dev
+#
+# Plan limits (enforced at deploy time):
+#   Starter (free) : 5 monitors,   min interval 300s (5 min)
+#   Team  ($24/mo) : 50 monitors,  min interval 60s  (1 min)
+#   Pro   ($59/mo) : unlimited,    min interval 30s
+#
+# Deploy:  termwatch deploy
+# Dry run: termwatch deploy --dry-run
+# ──────────────────────────────────────────────────────────────────────
+
+monitors:
+
+  # ── Web app ───────────────────────────────────────────────────────
+  # Checks that the homepage loads, returns 200, and contains expected text.
+  - name: web
+    url: https://your-app.com
+    type: https          # http | https | tcp  (default: http)
+    interval: 300        # seconds between checks  (range: 10–3600)
+    timeout: 15          # fail if no response within this many seconds (must be < interval)
+    expect:
+      status: 200        # expected HTTP status code (range: 100–599, default: 200)
+      contains: "Welcome"           # optional: response body must contain this string
+      response_time_ms: 2000        # optional: alert if response takes longer than this
+    alerts:
+      slack: "https://hooks.slack.com/services/T00/B00/xxxx"   # inline webhook URL
+      email: ops@example.com
+
+  # ── API health endpoint ───────────────────────────────────────────
+  # Most APIs expose a /health or /healthz endpoint — monitor that directly.
+  - name: api-health
+    url: https://api.your-app.com/health
+    type: https
+    interval: 300
+    timeout: 10
+    expect:
+      status: 200
+      contains: "healthy"          # e.g. {"status":"healthy"}
+      response_time_ms: 1500
+    alerts:
+      slack: "https://hooks.slack.com/services/T00/B00/xxxx"
+      discord: "https://discord.com/api/webhooks/000/xxxx"
+      email: ops@example.com
+
+  # ── Named webhook reference ───────────────────────────────────────
+  # Instead of pasting the webhook URL in every monitor, you can configure
+  # named webhooks server-side under Alerts:Slack:Webhooks:{name}
+  # and reference them here with any string that doesn't start with "http".
+  - name: checkout-service
+    url: https://api.your-app.com/checkout/health
+    interval: 300
+    timeout: 10
+    expect:
+      status: 200
+    alerts:
+      slack: "#oncall"             # resolved from server config: Alerts:Slack:Webhooks:oncall
+      discord: "#dev-alerts"       # resolved from: Alerts:Discord:Webhooks:dev-alerts
+
+  # ── Staging environment ───────────────────────────────────────────
+  # Check staging less frequently — no need for 1-min intervals on non-prod.
+  # Alerts go to a separate dev channel, not the oncall rotation.
+  - name: staging
+    url: https://staging.your-app.com
+    type: https
+    interval: 600                  # every 10 minutes is enough for staging
+    timeout: 30
+    expect:
+      status: 200
+    alerts:
+      slack: "#dev-alerts"
+
+  # ── TCP port check ────────────────────────────────────────────────
+  # Use type: tcp for databases, Redis, custom TCP services.
+  # URL format: host:port  (no http/https prefix)
+  # Only checks that the port accepts a connection — no HTTP involved.
+  - name: postgres
+    url: your-app.com:5432
+    type: tcp
+    interval: 300
+    timeout: 5
+    alerts:
+      slack: "#oncall"
+      email: ops@example.com
+
+  # ── TCP example: Redis ────────────────────────────────────────────
+  - name: redis
+    url: your-app.com:6379
+    type: tcp
+    interval: 300
+    timeout: 5
+    alerts:
+      slack: "#oncall"
