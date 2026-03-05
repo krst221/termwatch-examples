@@ -1,0 +1,25 @@
+name: Deploy Monitors
+on:
+  push:
+    branches: [main]
+    paths: [monitors.yaml]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TermWatch
+        run: curl -fsSL https://termwatch.dev/install.sh | sh
+
+      - name: Validate
+        run: termwatch validate
+        env:
+          TERMWATCH_API_KEY: ${{ secrets.TERMWATCH_API_KEY }}
+
+      - name: Deploy
+        run: termwatch deploy
+        env:
+          TERMWATCH_API_KEY: ${{ secrets.TERMWATCH_API_KEY }}
